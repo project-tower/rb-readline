@@ -1682,6 +1682,7 @@ module RbReadline
   #   the returned string all characters except those between \001 and
   #   \002 are assumed to be `visible'.
   def expand_prompt(pmt)
+    pmt.force_encoding("ASCII-8BIT")
     # Short-circuit if we can.
     if (@rl_byte_oriented && pmt[RL_PROMPT_START_IGNORE].nil?)
       r = pmt.dup
@@ -1701,27 +1702,31 @@ module RbReadline
     rl = 0
     ignoring = false
     last = ninvis = physchars = 0
-    for pi in 0 ... pmt.length
+    pi = 0
+    while pi <= pmt.length
       # This code strips the invisible character string markers
       #RL_PROMPT_START_IGNORE and RL_PROMPT_END_IGNORE
       if (!ignoring && pmt[pi,1] == RL_PROMPT_START_IGNORE)        # XXX - check ignoring?
         ignoring = true
         igstart = pi
+        pi += 1
         next
       elsif (ignoring && pmt[pi,1] == RL_PROMPT_END_IGNORE)
         ignoring = false
         if (pi != (igstart + 1))
           last = ret.length - 1
         end
+        pi += 1
         next
       else
         if !@rl_byte_oriented
           pind = pi
           ind = _rl_find_next_mbchar(pmt, pind, 1, MB_FIND_NONZERO)
           l = ind - pind
-          while (l>0)
-            l-=1
-            ret << pmt[pi]
+          if l > 0
+            ret << pmt[pind, l]
+            pi += l
+          else
             pi += 1
           end
           if (!ignoring)
@@ -1730,7 +1735,6 @@ module RbReadline
           else
             ninvis += ind - pind
           end
-          pi-=1       # compensate for later increment
         else
           ret << pmt[pi]
           if (!ignoring)
