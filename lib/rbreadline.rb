@@ -3374,8 +3374,12 @@ module RbReadline
     end
 
     while(_in < @rl_end)
-
-      c = @rl_line_buffer[_in,1]
+      is_utf8 = @rl_line_buffer.encoding.name == 'UTF-8'
+      if is_utf8
+        @rl_line_buffer = @rl_line_buffer.force_encoding("ASCII-8BIT")
+        @rl_end = @rl_point = @rl_line_buffer.strip.length
+      end
+      c = @rl_line_buffer[_in, wc_bytes]
       if(c == 0.chr)
         @rl_end = _in
         break
@@ -3535,7 +3539,7 @@ module RbReadline
           wc = @rl_line_buffer[_in,@rl_end - _in].scan(/./mu)[0]
           wc_bytes = wc ? wc.length : 1
         when 'X'
-          wc = @rl_line_buffer[_in,@rl_end - _in].force_encoding(@encoding_name)[0]
+          wc = @rl_line_buffer[_in,@rl_end - _in].clone.force_encoding(@encoding_name)[0]
           wc_bytes = wc ? wc.bytesize : 1
         end
 
